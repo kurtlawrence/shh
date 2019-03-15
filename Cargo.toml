@@ -1,0 +1,27 @@
+[package]
+name = "shh"
+version = "0.1.0"
+authors = ["kurt <kurtlawrence92@gmail.com>"]
+description = "Silence stderr and stdout, optionally rerouting it."
+license = "MIT"
+keywords = ["silent", "stdout", "stderr", "stdio", "redirect"]
+homepage = "https://github.com/kurtlawrence/shh"
+repository = "https://github.com/kurtlawrence/shh"
+documentation = "https://docs.rs/shh/"
+readme = "README.md"
+edition = "2018"
+
+[badges]
+travis-ci = { repository = "kurtlawrence/shh" }
+
+[dependencies]
+tempfile = "3.0"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.1", features = ["winbase", "wincon", "processenv", "handleapi", "namedpipeapi"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+lazy_static = "1"
