@@ -1,0 +1,36 @@
+sudo: required
+language: rust
+cache: cargo
+env: RUST_BACKTRACE=1
+
+matrix:
+  include:
+    - os: linux
+      rust: stable
+    - os: linux
+      rust: beta
+    - os: linux
+      rust: nightly
+      addons:
+        apt:
+          packages:
+            - libssl-dev
+    - os: windows
+      rust: stable
+  allow_failures:
+    - os: windows
+
+before_cache: |
+  if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == nightly ]]; then
+    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
+  fi
+
+script:
+  - cargo build
+  - cargo test
+
+after_success: |
+  if [[  "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == nightly ]]; then
+    cargo tarpaulin -v --out Xml
+    bash <(curl -s https://codecov.io/bash)
+  fi
