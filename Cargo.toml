@@ -1,6 +1,6 @@
 [package]
 name = "shh"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["kurt <kurtlawrence92@gmail.com>"]
 description = "Silence stderr and stdout, optionally rerouting it."
 license = "MIT"
