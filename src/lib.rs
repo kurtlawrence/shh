@@ -65,99 +65,60 @@
 
 #![warn(missing_docs)]
 
-// WINDOWS API ////////////////////////////////////////////////////
-#[cfg(windows)]
-mod windows;
+/// Just string replace the standard api interface.
+macro_rules! create_impl_interface {
+	($os:tt, $fdandle:ty) => {
+		#[cfg($os)]
+		mod $os;
 
-/// My pet name for the unix Fd or windows Handle types.
-#[cfg(windows)]
-type Fdandle = std::os::windows::io::RawHandle;
+		/// My pet name for the unix Fd or windows Handle types.
+		#[cfg($os)]
+		type Fdandle = $fdandle;
 
-#[cfg(windows)]
-pub type ShhStdio = Shh<windows::Impl, io::Stdout>;
+		#[cfg($os)]
+		pub type ShhStdout = Shh<$os::Impl, io::Stdout>;
 
-#[cfg(windows)]
-pub type ShhStderr = Shh<windows::Impl, io::Stderr>;
+		#[cfg($os)]
+		pub type ShhStderr = Shh<$os::Impl, io::Stderr>;
 
-/// Silence and redirect the stdout stream.
-///
-/// `Shh` implements `io::Read`, with all captured output able to be read back out.
-///
-/// # Example
-/// ```rust
-/// #![cfg(windows)]
-/// println!("you will see this");
-/// let shh = shh::stdout().unwrap();
-/// println!("but not this");
-/// drop(shh);
-/// println!("and this");
-/// ```
-#[cfg(windows)]
-pub fn stdout() -> io::Result<ShhStdio> {
-	Shh::new()
+		/// Silence and redirect the stdout stream.
+		///
+		/// `Shh` implements `io::Read`, with all captured output able to be read back out.
+		///
+		/// # Example
+		/// ```rust
+		/// println!("you will see this");
+		/// let shh = shh::stdout().unwrap();
+		/// println!("but not this");
+		/// drop(shh);
+		/// println!("and this");
+		/// ```
+		#[cfg($os)]
+		pub fn stdout() -> io::Result<ShhStdout> {
+			Shh::new()
+		}
+
+		/// Silence and redirect the stderr stream.
+		///
+		/// `Shh` implements `io::Read`, with all captured output able to be read back out.
+		///
+		/// # Example
+		/// ```rust
+		/// eprintln!("you will see this");
+		/// let shh = shh::stderr().unwrap();
+		/// eprintln!("but not this");
+		/// drop(shh);
+		/// eprintln!("and this");
+		/// ```
+		#[cfg($os)]
+		pub fn stderr() -> io::Result<ShhStderr> {
+			Shh::new()
+		}
+	};
 }
 
-/// Silence and redirect the stderr stream.
-///
-/// `Shh` implements `io::Read`, with all captured output able to be read back out.
-///
-/// # Example
-/// ```rust
-/// #![cfg(windows)]
-/// eprintln!("you will see this");
-/// let shh = shh::stderr().unwrap();
-/// eprintln!("but not this");
-/// drop(shh);
-/// eprintln!("and this");
-/// ```
-#[cfg(windows)]
-pub fn stderr() -> io::Result<ShhStderr> {
-	Shh::new()
-}
-
-///////////////////////////////////////////////////////////////////
-
-// UNIX API ///////////////////////////////////////////////////////
-#[cfg(unix)]
-mod unix;
-
-/// My pet name for the unix Fd or windows Handle types.
-#[cfg(unix)]
-type Fdandle = std::os::unix::io::RawFd;
-
-/// Gags the stdout stream.
-///
-/// # Example
-/// ```rust
-/// #![cfg(unix)]
-/// println!("you will see this");
-/// let shh = shh::stdout().unwrap();
-/// println!("but not this");
-/// drop(shh);
-/// println!("and this");
-/// ```
-#[cfg(unix)]
-pub fn stdout() -> io::Result<Ssh<unix::UnixImpl, io::Stdout>> {
-	Ssh::new()
-}
-
-/// Gags the stderr stream.
-///
-/// # Example
-/// ```rust
-/// #![cfg(unix)]
-/// eprintln!("you will see this");
-/// let shh = shh::stderr().unwrap();
-/// eprintln!("but not this");
-/// drop(shh);
-/// eprintln!("and this");
-/// ```
-#[cfg(unix)]
-pub fn stderr() -> io::Result<Ssh<unix::UnixImpl, io::Stderr>> {
-	Ssh::new()
-}
-
-///////////////////////////////////////////////////////////////////
+create_impl_interface!(windows, std::os::windows::io::RawHandle);
+create_impl_interface!(unix, std::os::unix::io::RawFd);
 
 use std::fs::File;
 use std::io::{self, Read};
@@ -174,7 +135,7 @@ trait Create {
 }
 
 pub trait Divert<D> {
-	fn divert_std_stream(&self) -> io::Result<()>;
+	fn divert_std_stream(write_file: &File) -> io::Result<()>;
 	fn reinstate_std_stream(original_fdandle: Fdandle) -> io::Result<()>;
 }
 
@@ -185,48 +146,56 @@ trait Device {
 /// A structure holding the redirection data.
 ///
 /// `Shh` implements `io::Read`, with all captured output able to be read back out.
-pub struct Shh<D> {
+pub struct Shh<Impl, Device>
+where
+	Impl: Divert<Device>,
+{
 	original: Fdandle,
 	write_file: File,
 	read_file: File,
-	device_mrker: PhantomData<D>,
+	impl_mrker: PhantomData<Impl>,
+	device_mrker: PhantomData<Device>,
 }
 
-impl<D> Shh<D>
+impl<I, D> Shh<I, D>
 where
+	I: Create + Divert<D>,
 	D: Device,
 {
-	fn new<T: Create>() -> io::Result<Self> {
+	fn new() -> io::Result<Self> {
 		// obtain current ptr to device
 		let original = <D as Device>::obtain_original()?;
 
 		// create data (a pipe or file) that can give a Fdandle to redirect to, and be closed
-		let (read_file, write_file) = Create::create_resource()?;
+		let (read_file, write_file) = <I as Create>::create_resource()?;
 
-		// redirect the device to the write fdandle
-		inner.divert_std_stream()?;
-
-		Ok(Shh {
+		let shh = Shh {
 			original,
 			read_file,
 			write_file,
+			impl_mrker: PhantomData,
 			device_mrker: PhantomData,
-		})
+		};
+
+		// redirect the device to the write fdandle
+		<I as Divert<D>>::divert_std_stream(&shh.write_file)?;
+
+		Ok(shh)
 	}
 }
 
-impl<T: Close + Divert<D>, D> Drop for Shh<T, D> {
+impl<I: Divert<D>, D> Drop for Shh<I, D> {
 	fn drop(&mut self) {
-		Divert::reinstate_std_stream(self.original);
+		<I as Divert<D>>::reinstate_std_stream(self.original).unwrap_or(())
 	}
 }
 
-impl<D> Read for Shh<D> {
+impl<I: Divert<D>, D> Read for Shh<I, D> {
 	fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
 		self.read_file.read(buf)
 	}
 }
 
-/// We can say `Shh` is safe as the `Fdandle`s are meant to last until we close them.
-/// As this is done on the `drop` of `Shh`, the handles should live for `Shh`s lifetime.
-unsafe impl<T: Divert<D> + Close, D> Send for Shh<T, D> {}
+/// Unsafe because of the `original: Fdandle`. This is retrieved from os and does not need
+/// cleaning up.
+unsafe impl<I: Divert<D>, D> Send for Shh<I, D> {}
