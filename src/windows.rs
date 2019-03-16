@@ -10,7 +10,7 @@ use winapi::shared::{
 };
 use winapi::um::{
 	handleapi::INVALID_HANDLE_VALUE,
-	minwinbase::SECURITY_ATTRIBUTES,
+	minwinbase::{OVERLAPPED, SECURITY_ATTRIBUTES},
 	winbase::{STD_ERROR_HANDLE, STD_OUTPUT_HANDLE},
 	winnt::HANDLE,
 };
@@ -40,17 +40,6 @@ impl Create for Impl {
 		}
 	}
 }
-
-// impl Close for Impl {
-// 	fn close_resource(&self) {
-// 		unsafe {
-// 			winapi::um::handleapi::CloseHandle(self.read_handle);
-// 		}
-// 		unsafe {
-// 			winapi::um::handleapi::CloseHandle(self.write_handle);
-// 		}
-// 	}
-// }
 
 impl Divert<io::Stdout> for Impl {
 	fn divert_std_stream(write_file: &File) -> io::Result<()> {
@@ -84,31 +73,33 @@ impl Device for io::Stderr {
 	}
 }
 
-// impl io::Read for Impl {
-// 	fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-// 		if !has_bytes(self.read_handle)? {
-// 			return Ok(0);
-// 		}
+impl ShhRead for Impl {
+	fn shh_read(read_file: &File, buf: &mut [u8]) -> io::Result<usize> {
+		let read_handle = read_file.as_raw_handle();
 
-// 		let buf_len: DWORD = buf.len() as DWORD;
-// 		let mut bytes_read: DWORD = 0;
+		if !has_bytes(read_handle)? {
+			return Ok(0);
+		}
 
-// 		let read_result = unsafe {
-// 			winapi::um::fileapi::ReadFile(
-// 				self.read_handle,
-// 				buf.as_mut_ptr() as *mut c_void,
-// 				buf_len,
-// 				&mut bytes_read,
-// 				NULL as *mut OVERLAPPED,
-// 			)
-// 		};
+		let buf_len: DWORD = buf.len() as DWORD;
+		let mut bytes_read: DWORD = 0;
 
-// 		match read_result {
-// 			0 => Err(io::Error::last_os_error()),
-// 			_ => Ok(bytes_read as usize),
-// 		}
-// 	}
-// }
+		let read_result = unsafe {
+			winapi::um::fileapi::ReadFile(
+				read_handle as HANDLE,
+				buf.as_mut_ptr() as *mut c_void,
+				buf_len,
+				&mut bytes_read,
+				NULL as *mut OVERLAPPED,
+			)
+		};
+
+		match read_result {
+			0 => Err(io::Error::last_os_error()),
+			_ => Ok(bytes_read as usize),
+		}
+	}
+}
 
 fn get_std_handle(device: DWORD) -> io::Result<Fdandle> {
 	match unsafe { winapi::um::processenv::GetStdHandle(device) } {
@@ -124,24 +115,24 @@ fn set_std_handle(device: DWORD, handle: Fdandle) -> io::Result<()> {
 	}
 }
 
-// /// Uses PeekNamedPipe and checks TotalBytesAvail
-// fn has_bytes(handle: HANDLE) -> io::Result<bool> {
-// 	let mut bytes_avail: DWORD = 0;
+/// Uses PeekNamedPipe and checks TotalBytesAvail
+fn has_bytes(handle: Fdandle) -> io::Result<bool> {
+	let mut bytes_avail: DWORD = 0;
 
-// 	let result = unsafe {
-// 		winapi::um::namedpipeapi::PeekNamedPipe(
-// 			handle,
-// 			NULL as *mut c_void,
-// 			0,
-// 			NULL as LPDWORD,
-// 			&mut bytes_avail,
-// 			NULL as LPDWORD,
-// 		)
-// 	};
+	let result = unsafe {
+		winapi::um::namedpipeapi::PeekNamedPipe(
+			handle as HANDLE,
+			NULL as *mut c_void,
+			0,
+			NULL as LPDWORD,
+			&mut bytes_avail,
+			NULL as LPDWORD,
+		)
+	};
 
-// 	if result == 0 {
-// 		return Err(io::Error::last_os_error());
-// 	}
+	if result == 0 {
+		return Err(io::Error::last_os_error());
+	}
 
-// 	Ok(bytes_avail > 0)
-// }
+	Ok(bytes_avail > 0)
+}
