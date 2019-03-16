@@ -1,6 +1,7 @@
 //! (Rust) Silence stderr and stdout, optionally rerouting it.
-//!
-//! # Stdout Gagging
+//! 
+//! Stdout Gagging
+//! 
 //! ```rust
 //! println!("STDOUT GAGGING", );
 //! println!("you will see this");
@@ -9,8 +10,9 @@
 //! drop(shh);
 //! println!("and this");
 //! ```
-//!
-//! # Stderr Gagging
+//! 
+//! Stderr Gagging
+//! 
 //! ```rust
 //! println!("STDERR GAGGING", );
 //! eprintln!("you will see this");
@@ -19,12 +21,13 @@
 //! drop(shh);
 //! eprintln!("and this");
 //! ```
-//!
-//! # Redirecting Example
+//! 
+//! Redirecting Example
+//! 
 //! ```rust
 //! println!("REDIRECTING", );
 //! use std::io::{Read, Write};
-//!
+//! 
 //! std::thread::spawn(move || {
 //! 	let mut shh = shh::stdout().unwrap();
 //! 	let mut stderr = std::io::stderr();
@@ -34,26 +37,26 @@
 //! 		stderr.write_all(&buf).unwrap();
 //! 	}
 //! });
-//!
+//! 
 //! println!("This should be printed on stderr");
 //! eprintln!("This will be printed on stderr as well");
-//!
+//! 
 //! // This will exit and close the spawned thread.
 //! // In most cases you will want to setup a channel and send a break signal to the loop,
 //! // and then join the thread back into it once you are finished.
 //! ```
-//!
+//! 
 //! # Scoping
-//!
+//! 
 //! The struct `Shh` implements the `Drop` trait. Upon going out of scope, the redirection is reset and resources are cleaned up. A `Shh` will only last for the scope, and where no local variable is used, the silencing will not work.
-//!
+//! 
 //! ## Example - Silencing Dropped Early
 //! ```rust
 //! println!("you will see this");
 //! shh::stdout().unwrap();		// Shh struct is created, and dropped, here
-//! println!("and expect not to see this");
+//! println!("and expect not to see this, but you will");
 //! ```
-//!
+//! 
 //! To fix this, just assign a local variable
 //! ```rust
 //! println!("you will see this");
@@ -75,9 +78,11 @@ macro_rules! create_impl_interface {
 		#[cfg($os)]
 		type Fdandle = $fdandle;
 
+		/// Type alias for `Shh`ing the stdout.
 		#[cfg($os)]
 		pub type ShhStdout = Shh<$os::Impl, io::Stdout>;
 
+		/// Type alias for `Shh`ing the stderr.
 		#[cfg($os)]
 		pub type ShhStderr = Shh<$os::Impl, io::Stderr>;
 
@@ -124,22 +129,24 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::marker::PhantomData;
 
-pub trait Close {
-	fn close_resource(&self);
-}
-
-trait Create {
+/// Trait which can create a read and write pipe as files.
+pub trait Create {
 	/// Create the read and write handles, taking ownership with `File`.
 	/// Return in (read_file, write_file)
-	fn create_resource() -> io::Result<(File, File)>;
+	fn create_files() -> io::Result<(File, File)>;
 }
 
+/// Trait which defines functions that divert and reinstate streams for std devices.
 pub trait Divert<D> {
+	/// Divert from the device into the `write_file`'s handle/fd;
 	fn divert_std_stream(write_file: &File) -> io::Result<()>;
+	/// Reinstate the std device to output. Gives the original handle/fd for use.
 	fn reinstate_std_stream(original_fdandle: Fdandle) -> io::Result<()>;
 }
 
-trait Device {
+/// Trait to enable getting the handle/fd a std device was looking at.
+pub trait Device {
+	/// Obtain the original handle/fd the std device was using.
 	fn obtain_original() -> io::Result<Fdandle>;
 }
 
@@ -167,7 +174,7 @@ where
 		let original = <D as Device>::obtain_original()?;
 
 		// create data (a pipe or file) that can give a Fdandle to redirect to, and be closed
-		let (read_file, write_file) = <I as Create>::create_resource()?;
+		let (read_file, write_file) = <I as Create>::create_files()?;
 
 		let shh = Shh {
 			original,

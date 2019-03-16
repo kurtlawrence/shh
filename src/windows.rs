@@ -10,7 +10,7 @@ use winapi::shared::{
 };
 use winapi::um::{
 	handleapi::INVALID_HANDLE_VALUE,
-	minwinbase::{OVERLAPPED, SECURITY_ATTRIBUTES},
+	minwinbase::SECURITY_ATTRIBUTES,
 	winbase::{STD_ERROR_HANDLE, STD_OUTPUT_HANDLE},
 	winnt::HANDLE,
 };
@@ -18,7 +18,7 @@ use winapi::um::{
 pub struct Impl;
 
 impl Create for Impl {
-	fn create_resource() -> io::Result<(File, File)> {
+	fn create_files() -> io::Result<(File, File)> {
 		let mut read_handle: HANDLE = NULL;
 		let mut write_handle: HANDLE = NULL;
 
@@ -124,24 +124,24 @@ fn set_std_handle(device: DWORD, handle: Fdandle) -> io::Result<()> {
 	}
 }
 
-/// Uses PeekNamedPipe and checks TotalBytesAvail
-fn has_bytes(handle: HANDLE) -> io::Result<bool> {
-	let mut bytes_avail: DWORD = 0;
+// /// Uses PeekNamedPipe and checks TotalBytesAvail
+// fn has_bytes(handle: HANDLE) -> io::Result<bool> {
+// 	let mut bytes_avail: DWORD = 0;
 
-	let result = unsafe {
-		winapi::um::namedpipeapi::PeekNamedPipe(
-			handle,
-			NULL as *mut c_void,
-			0,
-			NULL as LPDWORD,
-			&mut bytes_avail,
-			NULL as LPDWORD,
-		)
-	};
+// 	let result = unsafe {
+// 		winapi::um::namedpipeapi::PeekNamedPipe(
+// 			handle,
+// 			NULL as *mut c_void,
+// 			0,
+// 			NULL as LPDWORD,
+// 			&mut bytes_avail,
+// 			NULL as LPDWORD,
+// 		)
+// 	};
 
-	if result == 0 {
-		return Err(io::Error::last_os_error());
-	}
+// 	if result == 0 {
+// 		return Err(io::Error::last_os_error());
+// 	}
 
-	Ok(bytes_avail > 0)
-}
+// 	Ok(bytes_avail > 0)
+// }
