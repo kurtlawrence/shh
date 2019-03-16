@@ -13,8 +13,11 @@ impl Create for Impl {
 
         let create_pipe_result = unsafe { libc::pipe(outputs.as_mut_ptr()) };
 
-        let read_file = unsafe { FromRawFd::from_raw_fd(outputs[0]) };
-        let write_file = unsafe { FromRawFd::from_raw_fd(outputs[1]) };
+		let read_fd = outputs[0];
+		let write_fd = outputs[1];
+
+        let read_file = unsafe { FromRawFd::from_raw_fd(read_fd) };
+        let write_file = unsafe { FromRawFd::from_raw_fd(write_fd) };
 
         match create_pipe_result {
             -1 => Err(io::Error::last_os_error()),
@@ -57,7 +60,17 @@ impl Device for io::Stderr {
 
 impl ShhRead for Impl {
 	fn shh_read(mut read_file: &File, buf: &mut [u8]) -> io::Result<usize> {
-		read_file.read(buf)
+		let avail = 0;
+
+		let r = unsafe { libc::ioctl(read_file.as_raw_fd(), libc::FIONREAD) };
+
+		if r == -1 {
+			 Err(io::Error::last_os_error())
+		} else if avail == 0 {
+			 Ok(0)
+		} else {
+			read_file.read(buf)
+		}
 	}
 }
 

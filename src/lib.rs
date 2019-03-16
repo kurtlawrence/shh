@@ -216,3 +216,20 @@ impl<I: Divert<D> + ShhRead, D> Read for Shh<I, D> {
 /// Unsafe because of the `original: Fdandle`. This is retrieved from os and does not need
 /// cleaning up.
 unsafe impl<I: Divert<D>, D> Send for Shh<I, D> {}
+
+#[test]
+fn empty_read_test() {
+    // if this blocks then it is failing.
+    println!("this will be printed");
+    let mut shh = stdout().unwrap();
+    let mut s = String::new();
+    assert_eq!(shh.read_to_string(&mut s).unwrap(), 0); // should exit immediately and return empty string
+    assert_eq!(&s, "");
+
+    // if this blocks then it is failing.
+    eprintln!("this will be printed");
+    let mut shh = stderr().unwrap();
+    let mut s = String::new();
+    assert_eq!(shh.read_to_string(&mut s).unwrap(), 0); // should exit immediately and return empty string
+    assert_eq!(&s, "");
+}
