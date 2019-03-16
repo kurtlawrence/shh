@@ -33,6 +33,7 @@ impl Divert<io::Stdout> for Impl {
 
     fn reinstate_std_stream(original_fd: Fdandle) -> io::Result<()> {
         set_std_fd(libc::STDOUT_FILENO, original_fd)
+		// possibly close the original fd here		
     }
 }
 
@@ -60,9 +61,9 @@ impl Device for io::Stderr {
 
 impl ShhRead for Impl {
 	fn shh_read(mut read_file: &File, buf: &mut [u8]) -> io::Result<usize> {
-		let avail = 0;
+		let mut avail = 0;
 
-		let r = unsafe { libc::ioctl(read_file.as_raw_fd(), libc::FIONREAD) };
+		let r = unsafe { libc::ioctl(read_file.as_raw_fd(), libc::FIONREAD, &mut avail) };
 
 		if r == -1 {
 			 Err(io::Error::last_os_error())
