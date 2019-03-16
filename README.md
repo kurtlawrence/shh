@@ -1,6 +1,7 @@
 (Rust) Silence stderr and stdout, optionally rerouting it.
 
-# Stdout Gagging
+Stdout Gagging
+
 ```rust
 println!("STDOUT GAGGING", );
 println!("you will see this");
@@ -10,7 +11,8 @@ drop(shh);
 println!("and this");
 ```
 
-# Stderr Gagging
+Stderr Gagging
+
 ```rust
 println!("STDERR GAGGING", );
 eprintln!("you will see this");
@@ -20,7 +22,8 @@ drop(shh);
 eprintln!("and this");
 ```
 
-# Redirecting Example
+Redirecting Example
+
 ```rust
 println!("REDIRECTING", );
 use std::io::{Read, Write};
@@ -51,7 +54,7 @@ The struct `Shh` implements the `Drop` trait. Upon going out of scope, the redir
 ```rust
 println!("you will see this");
 shh::stdout().unwrap();		// Shh struct is created, and dropped, here
-println!("and expect not to see this");
+println!("and expect not to see this, but you will");
 ```
 
 To fix this, just assign a local variable

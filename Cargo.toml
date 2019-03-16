@@ -15,7 +15,6 @@ edition = "2018"
 travis-ci = { repository = "kurtlawrence/shh" }
 
 [dependencies]
-tempfile = "3.0"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winbase", "wincon", "processenv", "handleapi", "namedpipeapi"] }
