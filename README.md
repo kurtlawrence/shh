@@ -42,3 +42,24 @@ eprintln!("This will be printed on stderr as well");
 // In most cases you will want to setup a channel and send a break signal to the loop,
 // and then join the thread back into it once you are finished.
 ```
+
+# Scoping
+
+The struct `Shh` implements the `Drop` trait. Upon going out of scope, the redirection is reset and resources are cleaned up. A `Shh` will only last for the scope, and where no local variable is used, the silencing will not work.
+
+## Example - Silencing Dropped Early
+```rust
+println!("you will see this");
+shh::stdout().unwrap();		// Shh struct is created, and dropped, here
+println!("and expect not to see this");
+```
+
+To fix this, just assign a local variable
+```rust
+println!("you will see this");
+let shh = shh::stdout().unwrap();		// Shh struct is created here
+println!("and expect not to see this");
+drop(shh);	// and dropped here
+println!("now it works!");
+```
+
