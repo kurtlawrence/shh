@@ -203,7 +203,7 @@ where
 
 impl<I: Divert<D>, D> Drop for Shh<I, D> {
     fn drop(&mut self) {
-        <I as Divert<D>>::reinstate_std_stream(self.original).unwrap_or(())
+        <I as Divert<D>>::reinstate_std_stream(self.original).unwrap_or(());
     }
 }
 

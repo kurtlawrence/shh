@@ -11,7 +11,9 @@ impl Create for Impl {
     fn create_files() -> io::Result<(File, File)> {
         let mut outputs = [0; 2];
 
-        let create_pipe_result = unsafe { libc::pipe(outputs.as_mut_ptr()) };
+        if unsafe { libc::pipe(outputs.as_mut_ptr()) } == -1 {
+            return Err(io::Error::last_os_error())
+        }
 
 		let read_fd = outputs[0];
 		let write_fd = outputs[1];
@@ -19,10 +21,7 @@ impl Create for Impl {
         let read_file = unsafe { FromRawFd::from_raw_fd(read_fd) };
         let write_file = unsafe { FromRawFd::from_raw_fd(write_fd) };
 
-        match create_pipe_result {
-            -1 => Err(io::Error::last_os_error()),
-            _ => Ok((read_file, write_file)),
-        }
+        return Ok((read_file, write_file))
     }
 }
 
@@ -32,8 +31,8 @@ impl Divert<io::Stdout> for Impl {
     }
 
     fn reinstate_std_stream(original_fd: Fdandle) -> io::Result<()> {
-        set_std_fd(libc::STDOUT_FILENO, original_fd)
-		// possibly close the original fd here		
+        set_std_fd(libc::STDOUT_FILENO, original_fd)?;
+        close_handle(original_fd)
     }
 }
 
@@ -43,7 +42,8 @@ impl Divert<io::Stderr> for Impl {
     }
 
     fn reinstate_std_stream(original_fd: Fdandle) -> io::Result<()> {
-        set_std_fd(libc::STDERR_FILENO, original_fd)
+        set_std_fd(libc::STDERR_FILENO, original_fd)?;
+        close_handle(original_fd)
     }
 }
 
@@ -75,6 +75,12 @@ impl ShhRead for Impl {
 	}
 }
 
+fn close_handle(device: Fdandle) -> io::Result<()> {
+    match unsafe { libc::close(device) } {
+        0 => Ok(()),
+        _ => Err(io::Error::last_os_error()),
+    }
+}
 
 fn get_std_handle(device: Fdandle) -> io::Result<Fdandle> {
     match unsafe { libc::dup(device) } {
