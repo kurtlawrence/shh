@@ -21,7 +21,7 @@ impl Create for Impl {
         let read_file = unsafe { FromRawFd::from_raw_fd(read_fd) };
         let write_file = unsafe { FromRawFd::from_raw_fd(write_fd) };
 
-        return Ok((read_file, write_file))
+        Ok((read_file, write_file))
     }
 }
 
