@@ -29,13 +29,13 @@ println!("REDIRECTING", );
 use std::io::{Read, Write};
 
 std::thread::spawn(move || {
-	let mut shh = shh::stdout().unwrap();
-	let mut stderr = std::io::stderr();
-	loop {
-		let mut buf = Vec::new();
-		shh.read_to_end(&mut buf).unwrap();
-		stderr.write_all(&buf).unwrap();
-	}
+    let mut shh = shh::stdout().unwrap();
+    let mut stderr = std::io::stderr();
+    loop {
+        let mut buf = Vec::new();
+        shh.read_to_end(&mut buf).unwrap();
+        stderr.write_all(&buf).unwrap();
+    }
 });
 
 println!("This should be printed on stderr");
@@ -53,16 +53,16 @@ The struct `Shh` implements the `Drop` trait. Upon going out of scope, the redir
 ## Example - Silencing Dropped Early
 ```rust
 println!("you will see this");
-shh::stdout().unwrap();		// Shh struct is created, and dropped, here
+shh::stdout().unwrap();        // Shh struct is created, and dropped, here
 println!("and expect not to see this, but you will");
 ```
 
 To fix this, just assign a local variable
 ```rust
 println!("you will see this");
-let shh = shh::stdout().unwrap();		// Shh struct is created here
+let shh = shh::stdout().unwrap();        // Shh struct is created here
 println!("and expect not to see this");
-drop(shh);	// and dropped here
+drop(shh);    // and dropped here
 println!("now it works!");
 ```
 
