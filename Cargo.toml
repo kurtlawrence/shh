@@ -1,6 +1,6 @@
 [package]
 name = "shh"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["kurt <kurtlawrence92@gmail.com>"]
 description = "Silence stderr and stdout, optionally rerouting it."
 license = "MIT"
@@ -10,9 +10,6 @@ repository = "https://github.com/kurtlawrence/shh"
 documentation = "https://docs.rs/shh/"
 readme = "README.md"
 edition = "2018"
-
-[badges]
-travis-ci = { repository = "kurtlawrence/shh" }
 
 [dependencies]
 
