@@ -52,3 +52,11 @@ jobs:
 
     - name: Cargo test
       run: cargo test
+
+    - name: Run examples
+      run: |
+          cargo run --example empty-reads
+          cargo run --example redirect
+          cargo run --example scoping_examples
+          cargo run --example unix
+          cargo run --example windows
