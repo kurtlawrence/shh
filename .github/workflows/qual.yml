@@ -1,0 +1,49 @@
+name: Code Quality
+
+on:
+  push:
+    branches: master
+  pull_request:
+  schedule:
+    - cron: '00 07 * * 0'
+
+jobs:
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: nightly
+        override: true
+        components: rustfmt,clippy
+      
+    - name: Cache cargo registry
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry
+        key: code-qual-cargo-registry
+        
+    - name: Cache cargo index
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/git
+        key: code-qual-cargo-index
+      
+    - name: Cache cargo build
+      uses: actions/cache@v1
+      with:
+        path: target
+        key: code-qual-cargo-build-target
+
+    - name: Check formatting
+      run: cargo +stable fmt -- --check
+
+    - name: Check clippy
+      run: cargo clippy --all-features -- -D warnings
