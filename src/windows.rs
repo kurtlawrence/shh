@@ -2,7 +2,6 @@ use super::*;
 
 use std::io;
 use std::os::windows::io::{AsRawHandle, FromRawHandle};
-use winapi;
 use winapi::ctypes::c_void;
 use winapi::shared::{
     minwindef::{DWORD, LPDWORD},

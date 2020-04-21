@@ -1,6 +1,5 @@
 use super::*;
 
-use libc;
 use std::fs::File;
 use std::io;
 use std::os::unix::io::{AsRawFd, FromRawFd};
